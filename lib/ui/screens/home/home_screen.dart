@@ -1,9 +1,12 @@
-import 'package:chat_app/firestore/firestore_handler.dart';
+// ignore_for_file: use_build_context_synchronously
+
+import 'package:chat_app/cubits/chat_cubit/chat_cubit.dart';
 import 'package:chat_app/style/theme/app_colors.dart';
 import 'package:chat_app/ui/screens/chat/chat_screen.dart';
 import 'package:chat_app/ui/screens/login/login_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -65,12 +68,12 @@ class HomeScreen extends StatelessWidget {
       body: ListView(
         children: [
           GestureDetector(
-            onTap: () {
+            onTap: () async {
+              await BlocProvider.of<ChatCubit>(context).getCommonMessages();
               Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) => ChatScreen(
-                    streamFunction: FirestoreHandler.getCommonMessages(),
                     isCommon: true,
                   ),
                 ),
@@ -91,15 +94,13 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
           GestureDetector(
-            onTap: () {
+            onTap: () async {
+              await BlocProvider.of<ChatCubit>(context)
+                  .getMessages(FirebaseAuth.instance.currentUser!.uid);
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => ChatScreen(
-                    streamFunction: FirestoreHandler.getMessages(
-                      FirebaseAuth.instance.currentUser!.uid,
-                    ),
-                  ),
+                  builder: (context) => ChatScreen(),
                 ),
               );
             },

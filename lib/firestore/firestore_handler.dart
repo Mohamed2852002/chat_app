@@ -57,7 +57,7 @@ class FirestoreHandler {
     docRef.set(message);
   }
 
-  static createCommonMessage(Message message, String userId) {
+  static createCommonMessage(Message message) {
     final collection = getCommonMessageCollection();
     final docRef = collection.doc();
     docRef.set(message);

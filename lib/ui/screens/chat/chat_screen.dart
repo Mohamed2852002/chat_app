@@ -1,24 +1,22 @@
-import 'package:chat_app/firestore/firestore_handler.dart';
+import 'package:chat_app/cubits/chat_cubit/chat_cubit.dart';
+import 'package:chat_app/cubits/chat_cubit/chat_state.dart';
 import 'package:chat_app/firestore/models/message.dart';
 import 'package:chat_app/ui/screens/chat/widgets/custom_text_field.dart';
 import 'package:chat_app/ui/screens/chat/widgets/message_bubble_widget.dart';
 import 'package:chat_app/ui/screens/chat/widgets/recieved_bubble_widget.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+// ignore: must_be_immutable
 class ChatScreen extends StatelessWidget {
-  ChatScreen({
-    super.key,
-    required this.streamFunction,
-    this.isCommon = false,
-  });
+  ChatScreen({super.key, this.isCommon = false});
   static const String routeName = 'chat';
   final TextEditingController controller = TextEditingController();
   final ScrollController listController = ScrollController();
-  final Stream<List<Message>> streamFunction;
   final bool isCommon;
+  List<Message> messages = [];
 
   @override
   Widget build(BuildContext context) {
@@ -44,18 +42,11 @@ class ChatScreen extends StatelessWidget {
       body: Column(
         children: [
           Expanded(
-            child: StreamBuilder<List<Message>>(
-              stream: streamFunction,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return Center(
-                    child: CircularProgressIndicator(),
-                  );
+            child: BlocBuilder<ChatCubit, ChatState>(
+              builder: (context, state) {
+                if (state is ChatSuccess) {
+                  messages = state.messages;
                 }
-                if (snapshot.hasError) {
-                  return Center(child: Text('There was an Error'));
-                }
-                List<Message> messages = snapshot.data ?? [];
                 return ListView.separated(
                   reverse: true,
                   controller: listController,
@@ -63,6 +54,7 @@ class ChatScreen extends StatelessWidget {
                   separatorBuilder: (context, index) => SizedBox(
                     height: 16.h,
                   ),
+                  itemCount: messages.length,
                   itemBuilder: (context, index) {
                     if (messages[index].messageId ==
                         FirebaseAuth.instance.currentUser!.email!) {
@@ -73,7 +65,6 @@ class ChatScreen extends StatelessWidget {
                       return RecievedBubbleWidget(message: messages[index]);
                     }
                   },
-                  itemCount: messages.length,
                 );
               },
             ),
@@ -83,9 +74,15 @@ class ChatScreen extends StatelessWidget {
             child: CustomTextField(
               onBtnPressed: () {
                 if (isCommon) {
-                  createNewCommonMessage();
+                  BlocProvider.of<ChatCubit>(context).createNewCommonMessage(
+                    controller: controller,
+                    listController: listController,
+                  );
                 } else {
-                  createNewMessage();
+                  BlocProvider.of<ChatCubit>(context).createNewMessage(
+                    controller: controller,
+                    listController: listController,
+                  );
                 }
               },
               controller: controller,
@@ -94,47 +91,5 @@ class ChatScreen extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  createNewMessage() {
-    if (controller.text != '') {
-      FirestoreHandler.createMessage(
-        Message(
-          content: controller.text,
-          messageTime: Timestamp.fromDate(
-            DateTime.now(),
-          ),
-          messageId: FirebaseAuth.instance.currentUser!.email!,
-        ),
-        FirebaseAuth.instance.currentUser!.uid,
-      );
-      controller.clear();
-      listController.animateTo(
-        listController.position.minScrollExtent,
-        duration: Duration(milliseconds: 100),
-        curve: Curves.linear,
-      );
-    }
-  }
-
-  createNewCommonMessage() {
-    if (controller.text != '') {
-      FirestoreHandler.createCommonMessage(
-        Message(
-          content: controller.text,
-          messageTime: Timestamp.fromDate(
-            DateTime.now(),
-          ),
-          messageId: FirebaseAuth.instance.currentUser!.email!,
-        ),
-        FirebaseAuth.instance.currentUser!.uid,
-      );
-      controller.clear();
-      listController.animateTo(
-        listController.position.minScrollExtent,
-        duration: Duration(milliseconds: 100),
-        curve: Curves.linear,
-      );
-    }
   }
 }
